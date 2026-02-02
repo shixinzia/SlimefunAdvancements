@@ -162,7 +162,7 @@ public class VanillaHook {
     }
 
     private void logGroupDebug(String groupId, String rawBackground, String resolvedBackground, NamespacedKey key,
-            JsonObject json) {
+                               JsonObject json) {
         if (!SFAdvancements.getMainConfig().getBoolean("debug")) {
             return;
         }
