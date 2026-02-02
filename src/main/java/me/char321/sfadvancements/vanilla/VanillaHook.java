@@ -708,7 +708,6 @@ public class VanillaHook {
         });
 
     }
-
     /**
      * Detects if the server supports the new custom_model_data format introduced in 1.21.2.
      * In 1.21.2+, custom_model_data uses object format: {"floats": [...], "flags": [...], ...}
