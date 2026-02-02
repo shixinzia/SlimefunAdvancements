@@ -40,6 +40,7 @@ public class VanillaHook {
     private boolean initialized = false;
     private final Set<NamespacedKey> loadedKeys = ConcurrentHashMap.newKeySet();
     private BackgroundStyle backgroundStyle = BackgroundStyle.RESOURCE_LOCATION;
+    private static final boolean SUPPORTS_NEW_CUSTOM_MODEL_DATA = detectNewCustomModelDataSupport();
 
     public void init() {
         if (initialized)
@@ -424,11 +425,17 @@ public class VanillaHook {
             return;
         }
         if (meta.hasCustomModelData()) {
-            JsonObject custom = new JsonObject();
-            JsonArray floats = new JsonArray();
-            floats.add((float) meta.getCustomModelData());
-            custom.add("floats", floats);
-            components.add("minecraft:custom_model_data", custom);
+            if (SUPPORTS_NEW_CUSTOM_MODEL_DATA) {
+                // 1.21.2+ format: {"floats": [...], ...}
+                JsonObject custom = new JsonObject();
+                JsonArray floats = new JsonArray();
+                floats.add((float) meta.getCustomModelData());
+                custom.add("floats", floats);
+                components.add("minecraft:custom_model_data", custom);
+            } else {
+                // Pre-1.21.2 format: simple integer
+                components.addProperty("minecraft:custom_model_data", meta.getCustomModelData());
+            }
         }
     }
 
@@ -700,5 +707,35 @@ public class VanillaHook {
             }
         });
 
+    }
+
+    /**
+     * Detects if the server supports the new custom_model_data format introduced in 1.21.2.
+     * In 1.21.2+, custom_model_data uses object format: {"floats": [...], "flags": [...], ...}
+     * In 1.21.1 and earlier, it uses a simple integer format.
+     */
+    private static boolean detectNewCustomModelDataSupport() {
+        try {
+            String version = Bukkit.getBukkitVersion();
+            // Format: "1.21.1-R0.1-SNAPSHOT" or similar
+            String[] parts = version.split("-")[0].split("\\.");
+            int major = Integer.parseInt(parts[0]);
+            int minor = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+            int patch = parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
+
+            // 1.21.2+ supports the new format
+            if (major > 1) return true;
+            if (major == 1 && minor > 21) return true;
+            if (major == 1 && minor == 21 && patch >= 2) return true;
+            return false;
+        } catch (Exception e) {
+            // If parsing fails, try method detection as fallback
+            try {
+                Class.forName("org.bukkit.inventory.meta.components.CustomModelDataComponent");
+                return true;
+            } catch (ClassNotFoundException ignored) {
+                return false;
+            }
+        }
     }
 }
